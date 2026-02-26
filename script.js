@@ -1,3 +1,26 @@
+class Usuario{
+    constructor(usuario, password, idPais){
+        this.usuario = usuario
+        this.password = password
+        this.idPais = idPais
+    }
+}
+
+class UsuarioConectado{
+    constructor(usuario, password){
+        this.usuario = usuario
+        this.password = password
+    }
+}
+
+class Pelicula{
+    constructor(idCategoria, nombre, fechaEstreno){
+        this.idCategoria = idCategoria
+        this.nombre = nombre
+        this.fechaEstreno = fechaEstreno
+    }
+}
+
 const URLBASE = "https://movielist.develotion.com";
 
 const MENU = document.querySelector("#menu");
@@ -19,78 +42,81 @@ const BTNLOGOUT = document.querySelector("#btnMenuLogout");
 
 let CATEGORIAS = [];
 let PELICULAS = [];
+let PAISES = [];
 
-class Usuario{
-    constructor(usuario, password, idpais){
-        this.usuario = usuario
-        this.password = password
-        this.idpais = idpais
-    }
-}
+let map;
 
-class UsuarioConectado{
-    constructor(usuario, password){
-        this.usuario = usuario
-        this.password = password
-    }
-}
-
-class Pelicula{
-    constructor(idCategoria, nombre, fecha){
-        this.idCategoria = idCategoria
-        this.nombre = nombre
-        this.fecha = fecha
-    }
-}
-
-Inicio();
+const PAISES_MAPA = [
+    { nombre: "Uruguay", lat: -32.5228, lng: -55.7658 },
+    { nombre: "Argentina", lat: -38.4161, lng: -63.6167 },
+    { nombre: "Brazil", lat: -14.2350, lng: -51.9253 },
+    { nombre: "Chile", lat: -35.6751, lng: -71.5430 },
+    { nombre: "Bolivia", lat: -16.2902, lng: -63.5887 },
+    { nombre: "Colombia", lat: 4.5709, lng: -74.2973 },
+    { nombre: "Ecuador", lat: -1.8312, lng: -78.1834 },
+    { nombre: "Peru", lat: -9.1900, lng: -75.0152 },
+    { nombre: "Paraguay", lat: -23.4425, lng: -58.4438 },
+    { nombre: "Venezuela", lat: 6.4238, lng: -66.5897 }
+];
 
 function cerrarMenu(){
     MENU.close();
 }
 
+Inicio();
+
 function Inicio(){
-    ROUTEO.addEventListener("ionRouteDidChange", navegar);
-    setFechaMaxima(); //Defino la fecha maxima para seleccionar en el calendario
-
-
-
-
-    document.querySelector("#filtroFecha").addEventListener("ionChange", aplicarFiltroFecha);
-
-
-
-
-    if(localStorage.getItem("usuario") && localStorage.getItem("password")){
+    // autoLogin si hay credenciales
+    if (localStorage.getItem("usuario") && localStorage.getItem("password")) {
         autoLogin();
-        previaCargarCategorias();
-    }else{
-        previaCargarPaises();
+    } else {
         menuDeslogeado();
-        ocultarPantallas();
-        LOGIN.style.display = "block";
     }
 
+    previaCargarPaises();
+
+    ROUTEO.addEventListener("ionRouteDidChange", navegar);
+
+    document.querySelector("#filtroFecha").addEventListener("ionChange", aplicarFiltroFecha);
     document.querySelector("#btnLogin").addEventListener("click", previaLogin);
     document.querySelector("#btnRegistrarUsuario").addEventListener("click", previaRegistroUsuario);
     document.querySelector("#btnRegistrarPelicula").addEventListener("click", previaRegistrarPelicula);
-    BTNLISTAPELICULAS.addEventListener("click", previaCargarPeliculas);
-    BTNREGISTROPELICULA.addEventListener("click", previaCargarCategorias);
-    BTNESTADISTICASPELICULAS.addEventListener("click", previaCargarCategoriasEstadisticas);
+    BTNESTADISTICASPELICULAS.addEventListener("click", cargarEstadisticas);
     BTNLOGOUT.addEventListener("click", logout);
 }
 
 function navegar(event){
-
-    let destino = event.detail.to;
+    const destino = event.detail.to;
 
     ocultarPantallas();
-    if(destino == "/") LOGIN.style.display="block";
-    if(destino == "/listaPeliculas") LISTAPELICULAS.style.display="block";
-    if(destino == "/registroUsuario") REGISTROUSUARIO.style.display="block";
-    if(destino == "/registroPelicula") REGISTROPELICULA.style.display="block";
-    if(destino == "/estadisticasPeliculas") ESTADISTICASPELICULAS.style.display="block";
-    if(destino == "/mapaUsuarios") MAPAUSUARIOS.style.display="block";
+
+    if (destino === "/") {
+        LOGIN.style.display = "block";
+    }
+
+    if (destino === "/listaPeliculas") {
+        LISTAPELICULAS.style.display = "block";
+        previaCargarPeliculas();
+    }
+
+    if (destino === "/registroUsuario") {
+        REGISTROUSUARIO.style.display = "block";
+    }
+
+    if (destino === "/registroPelicula") {
+        REGISTROPELICULA.style.display = "block";
+        previaCargarCategorias();
+    }
+
+    if (destino === "/estadisticasPeliculas") {
+        ESTADISTICASPELICULAS.style.display = "block";
+        cargarEstadisticas();
+    }
+
+    if (destino === "/mapaUsuarios") {
+        MAPAUSUARIOS.style.display = "block";
+        crearMapa();
+    }
 }
 
 
@@ -129,24 +155,22 @@ function menuLogeado(){
 
 function previaCargarPaises(){
 
+    PAISES = [];
+
     fetch(`${URLBASE}/paises`)
     .then(function (response){
         return response.json();
     })
     .then(function (data){
-        let paises = [];
         for(let unP of data.paises){
-            paises.push(unP);
+            PAISES.push(unP);
         }
-
-        cargarPaises(paises);
-
+        cargarPaises(PAISES);
     })
     .catch(function (error){
         console.log(error);
     });
 }
-
 
 function cargarPaises(listaPaises){
 
@@ -168,6 +192,11 @@ function previaRegistroUsuario(){
     const password = document.querySelector("#registroPassword").value;
     const idPais = document.querySelector("#registroPais").value;
 
+    if(usuario == "" || password == "" || idPais == null){
+        alert("Ningun campo debe estar vacio");
+        return
+    }
+    
     let nuevoUsuario = new Usuario(usuario, password, idPais);
 
     registrarUsuario(nuevoUsuario);
@@ -187,7 +216,10 @@ function registrarUsuario(nuevoUsuario) {
     })
     .then(function (data){
         if(data.codigo==200){
-            login(nuevoUsuario);
+
+            const usuarioConectado = new UsuarioConectado(nuevoUsuario.usuario, nuevoUsuario.password);
+            login(usuarioConectado);
+
             alert("Usuario registrado con exito")
         }else{
             alert(data.mensaje)
@@ -198,12 +230,13 @@ function registrarUsuario(nuevoUsuario) {
     });
 }
 
+
 function aplicarFiltroFecha(){
     const filtro = document.querySelector("#filtroFecha").value;
 
     if(filtro === "todas"){
-      cargarPeliculas(PELICULAS);
-      return;
+        cargarPeliculas(PELICULAS);
+        return;
     }
 
     let dias;
@@ -231,24 +264,31 @@ function aplicarFiltroFecha(){
             peliculasFiltradas.push(unaP)
         }
     }
-
     cargarPeliculas(peliculasFiltradas);
 }
 
-function previaLogin(){
-  let usuario; 
-  let password; 
-  if(localStorage.getItem("token")){
-    usuario = localStorage.getItem("usuario");
-    password = localStorage.getItem("password")
-  }else{
-    usuario = document.querySelector("#loginUsuario").value;
-    password = document.querySelector("#loginPassword").value;
-  }
 
-  let nuevoUsuarioConectado = new UsuarioConectado(usuario, password);
-  
-  login(nuevoUsuarioConectado);
+function previaLogin(){
+    let usuario; 
+    let password; 
+
+    if(localStorage.getItem("token")){
+        usuario = localStorage.getItem("usuario");
+        password = localStorage.getItem("password")
+    }else{
+        usuario = document.querySelector("#loginUsuario").value;
+        password = document.querySelector("#loginPassword").value;
+
+        if(usuario == "" || password == ""){
+            alert("No se permiten campos vacios")
+            return
+        }
+
+    }
+
+    let nuevoUsuarioConectado = new UsuarioConectado(usuario, password);
+
+    login(nuevoUsuarioConectado);
 }
 
 function login(usuarioConectado){
@@ -263,14 +303,17 @@ function login(usuarioConectado){
         return response.json();
     })
     .then(function (data){
+
         if(data.codigo == 200){
-            ocultarPantallas();
-            LISTAPELICULAS.style.display="block"
             localStorage.setItem("token", data.token);
             localStorage.setItem("usuario", usuarioConectado.usuario);
             localStorage.setItem("password", usuarioConectado.password);
-            menuLogeado();
+
+            ocultarPantallas();
+            LISTAPELICULAS.style.display="block"
             previaCargarPeliculas();
+            previaCargarCategorias();
+            menuLogeado();
             alert("Usuario logeado con exito");
         }else{
             alert(data.mensaje)
@@ -282,23 +325,27 @@ function login(usuarioConectado){
 }
 
 function autoLogin(){
-  const usuario = localStorage.getItem("usuario");
-  const password = localStorage.getItem("password");
+    const usuario = localStorage.getItem("usuario");
+    const password = localStorage.getItem("password");
 
-  if(usuario && password){
-    login(new UsuarioConectado(usuario, password));
-    document.querySelector("#loginUsuario").value = usuario;                  
-    document.querySelector("#loginPassword").value = password;
-  }else{
-    menuDeslogeado();
-    ocultarPantallas();
-    LOGIN.style.display = "block";
-    previaCargarPaises();
-  }
+    if(usuario && password){
+        // opcional: precargar inputs
+        const uInput = document.querySelector("#loginUsuario");
+        const pInput = document.querySelector("#loginPassword");
+        if (uInput) uInput.value = usuario;
+        if (pInput) pInput.value = password;
+
+        login(new UsuarioConectado(usuario, password));
+    }else{
+        menuDeslogeado();
+        ocultarPantallas();
+        LOGIN.style.display = "block";
+    }
 }
 
-function logout(){
 
+function logout(){
+    if(!confirm("¿Seguro que querés salir?")) return;
     localStorage.removeItem("token");
     localStorage.removeItem("usuario");
     localStorage.removeItem("password");
@@ -308,44 +355,43 @@ function logout(){
     ocultarPantallas();
 
     LOGIN.style.display = "block";
-
-    window.location.href = "/";
-
 }
 
+
 function previaCargarCategorias(){
+
+    CATEGORIAS = [];
+
     fetch(`${URLBASE}/categorias`, {
         method: "GET",
         headers: { 
             "Authorization": "Bearer " + localStorage.getItem("token"),
             "Content-Type": "application/json" 
-        },
-        body: JSON.stringify()
+        }
     })
-    .then(function (response){
-        return response.json();
-    })
+    .then(function (response){ return response.json(); })
     .then(function (data){
-        let categorias = [];
+
         for(let unaC of data.categorias){
-            categorias.push(unaC);
+            CATEGORIAS.push(unaC);
         }
 
-        cargarCategorias(categorias);
+        cargarCategorias();
 
+        if(PELICULAS.length > 0){
+            aplicarFiltroFecha();
+        }
     })
     .catch(function (error){
         console.log(error);
     });
 }
 
-function cargarCategorias(listaCategorias){
-
-    CATEGORIAS = listaCategorias;
+function cargarCategorias(){
 
     let miSelect = "";
 
-    for(let unaC of listaCategorias){
+    for(let unaC of CATEGORIAS){
         miSelect += 
             `<ion-select-option value="${unaC.id}">
                 ${unaC.emoji} | ${unaC.nombre}
@@ -366,88 +412,95 @@ function obtenerCategoria(idCategoria){
     return "Sin categoría";
 }
 
+function setFechaMaxima(){
+    const hoy = new Date().toJSON().slice(0, 10);
+    document.querySelector("#registroPeliculaFecha").setAttribute("max", hoy);
+}
+
+setFechaMaxima();
+
+
 function previaRegistrarPelicula(){
     const idCategoria = document.querySelector("#registroPeliculaCategoria").value;
     const nombre = document.querySelector("#registroPeliculaNombre").value;
-    const fecha = document.querySelector("#registoPeliculaFecha").value;
+    const fechaEstreno = document.querySelector("#registroPeliculaFecha").value;
+    const comentario = document.querySelector("#registroPeliculaComentario").value;
 
     const hoy = new Date().toJSON().slice(0, 10);
 
-    if(fecha > hoy){
-        alert("La fecha no puede ser posterior a hoy");
+    if(fechaEstreno > hoy){
+        alert("La fecha no puede ser futura");
         return;
     }
 
-    const nuevaPelicula = new Pelicula(idCategoria, nombre, fecha);
+    evaluarComentario(comentario).then(function(resultado){
 
-    registrarPelicula(nuevaPelicula);
-}
-
-async function registrarPelicula(nuevaPelicula){
-    try{
-        const comentario = document.querySelector("#registoPeliculaComentario").value;
-
-        const evaluacion = await evaluarComentario(comentario);
-
-        if(evaluacion === 1){
-
-            const response = await fetch(`${URLBASE}/peliculas`, {
-                method: "POST",
-                headers: { 
-                    "Authorization": "Bearer " + localStorage.getItem("token"),
-                    "Content-Type": "application/json"
-                },
-                body: JSON.stringify(nuevaPelicula)
-            });
-
-            const data = await response.json();
-
-            if(data.codigo === 200){
-                alert("Pelicula registrada con exito");
-            }else{
-                alert(data.mensaje);
-            }
-
-        }else{
-            alert("La pelicula es muy mala");
+        if(resultado != 1){
+            alert("El comentario es negativo, no se subió la película");
+            return;
         }
 
-    }catch(error){
-        console.log(error);
-        alert("Error evaluando el comentario o registrando la película");
-    }
+        const nuevaPelicula = new Pelicula(idCategoria, nombre, fechaEstreno);
+        registrarPelicula(nuevaPelicula);
+    })
 }
 
-function setFechaMaxima(){
-    const hoy = new Date().toJSON().slice(0, 10);
-    document.querySelector("#registoPeliculaFecha").setAttribute("max", hoy);
-}
-
-async function evaluarComentario(comentario){
-  const response = await fetch(`${URLBASE}/genai`, {
+function registrarPelicula(nuevaPelicula){
+    fetch (`${URLBASE}/peliculas`,{
     method: "POST",
     headers: { 
-      "Content-Type": "application/json"
+        "Authorization": "Bearer " + localStorage.getItem("token"),
+        "Content-Type": "application/json" 
     },
-    body: JSON.stringify({ prompt: comentario })
-  });
+    body: JSON.stringify(nuevaPelicula)
+    })
+    .then(function (response){
+    return response.json()
+    })
+    .then(function(informacion){
+        console.log(informacion)
+        if (informacion.codigo==200){
+            alert("La pelicula fue subida correctamente!")
+        }else{
+            alert("Hubo problemas al subir la pelicula")
+        }
+    })
+    .catch(function(error){
+        console.log(error)
+    })
+}
 
-  const data = await response.json();
 
-  if(data.sentiment === "Positivo" || data.sentiment === "Neutro") return 1;
-
-  return 0;
+function evaluarComentario(comentario){
+    return fetch(`${URLBASE}/genai`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ prompt: comentario })
+    })
+    .then(function(response){
+        return response.json();
+    })
+    .then(function(data){
+        if(data.sentiment === "Positivo" || data.sentiment === "Neutro"){
+            return 1;
+        }
+        return 0;
+    })
+    .catch(function(error){
+        console.log(error);
+        return 0;
+    });
 }
 
 function previaCargarPeliculas(){
-fetch(`${URLBASE}/peliculas`, {
-    method: "GET",
-    headers: { 
-      "Authorization": "Bearer " + localStorage.getItem("token"),
-      "Content-Type": "application/json"
-    }
-})
-.then(function (response){
+    fetch(`${URLBASE}/peliculas`, {
+        method: "GET",
+        headers: { 
+            "Authorization": "Bearer " + localStorage.getItem("token"),
+            "Content-Type": "application/json"
+        }
+    })
+    .then(function (response){
         return response.json();
     })
     .then(function (info){
@@ -460,155 +513,178 @@ fetch(`${URLBASE}/peliculas`, {
 }
 
 function cargarPeliculas(listaPeliculas){
+    const contenedor = document.querySelector("#listaPeliculas");
+    contenedor.innerHTML = "";
 
-  let contenido = "";
+    // primero chequeo que exista
+    if (!listaPeliculas || listaPeliculas.length === 0) {
+        contenedor.innerHTML = 
+            `<ion-item lines="none">
+                <ion-label>No hay películas registradas</ion-label>
+            </ion-item>`;
+        return;
+    }
 
-  for(let unaP of listaPeliculas){
+    let contenido = "";
 
-    const categoriaTexto = obtenerCategoria(unaP.idCategoria);
+    for (let unaP of listaPeliculas) {
+        const categoriaTexto = obtenerCategoria(unaP.idCategoria);
 
-    contenido += `
-      <ion-item>
-        <ion-label>
-          <h2>${unaP.nombre}</h2>
-          <p>Fecha de salida: ${unaP.fechaEstreno}</p>
-          <p>Categoría: ${categoriaTexto}</p>
-        </ion-label>
+        contenido += 
+            `<ion-item>
+                <ion-label> 
+                    <h2>${unaP.nombre}</h2> <p>Fecha de salida: ${unaP.fechaEstreno}</p> <p>Categoría: ${categoriaTexto}</p>
+                </ion-label>
 
-        <ion-button color="danger" fill="outline" slot="end"
-          onclick="previaBorrarPelicula(${unaP.id})">
-          Borrar
-        </ion-button>
-      </ion-item>
-    `;
-  }
+                <ion-button color="danger" fill="outline" slot="end" onclick="previaBorrarPelicula(${unaP.id})">Borrar</ion-button>
+            </ion-item>`;
+    }
 
-  document.querySelector("#listaPeliculas").innerHTML = contenido;
+    contenedor.innerHTML = contenido;
 }
 
 
 function previaBorrarPelicula(idPelicula){
-  if(!confirm("¿Seguro que querés borrar esta película?")) return;
+    if(!confirm("¿Seguro que querés borrar esta película?")) return;
 
-  fetch(`${URLBASE}/peliculas/${idPelicula}`, {
-    method: "DELETE",
-    headers: { 
-      "Authorization": "Bearer " + localStorage.getItem("token"),
-      "Content-Type": "application/json"
-    }
-  })
-  .then(function(response){
-    return response.json();
-  })
-  .then(function(data){
-    if(data.codigo === 200){
-      previaCargarPeliculas();
-    }else{
-      alert(data.mensaje);
-    }
-  })
-  .catch(function(error){
-    console.log(error);
-  });
-}
-
-function previaCargarCategoriasEstadisticas(){
-
-    fetch(`${URLBASE}/categorias`, {
-        method: "GET",
+    fetch(`${URLBASE}/peliculas/${idPelicula}`, {
+        method: "DELETE",
         headers: { 
             "Authorization": "Bearer " + localStorage.getItem("token"),
             "Content-Type": "application/json"
-        }
+    }
     })
     .then(function(response){
         return response.json();
     })
     .then(function(data){
-
-        let categorias = data.categorias || [];
-
-        previaCargarPeliculasEstadisticas(categorias);
-    })
-    .catch(function(error){
-        console.log(error);
-        alert("Error cargando categorías");
-    });
-}
-
-function previaCargarPeliculasEstadisticas(categorias){
-
-    fetch(`${URLBASE}/peliculas`, {
-        method: "GET",
-        headers: { 
-            "Authorization": "Bearer " + localStorage.getItem("token"),
-            "Content-Type": "application/json"
+        if(data.codigo === 200){
+            previaCargarPeliculas();
+        }else{
+            alert(data.mensaje);
         }
     })
-    .then(function(response){
-        return response.json();
-    })
-    .then(function(info){
-
-        let peliculas = info.peliculas || [];
-
-        cargarEstadisticas(categorias, peliculas);
-    })
     .catch(function(error){
         console.log(error);
-        alert("Error cargando películas");
     });
 }
 
-function cargarEstadisticas(categorias, peliculas){
+
+function cargarEstadisticas() {
+    const contenedor = document.querySelector("#listaStatsCategorias");
+    contenedor.innerHTML = "";
 
     let contenido = "";
 
-    for(let unaC of categorias){
-
+    for (let unaC of CATEGORIAS) {
         let contador = 0;
 
-        for(let unaP of peliculas){
-            if(unaP.idCategoria === unaC.id){
+        for (let unaP of PELICULAS) {
+            if (unaP.idCategoria === unaC.id) {
                 contador++;
             }
         }
 
-        contenido += `
-            <ion-item>
+        contenido += 
+            `<ion-item>
                 <ion-label>
                     ${unaC.emoji} ${unaC.nombre} ${unaC.edad_requerida}
                 </ion-label>
                 <ion-badge slot="end" color="primary">
                     ${contador}
                 </ion-badge>
-            </ion-item>
-        `;
+            </ion-item>`;
     }
 
-    document.querySelector("#listaStatsCategorias").innerHTML = contenido;
+    contenedor.innerHTML = contenido;
 
     let categoriasPorId = {};
-    for(let unaC of categorias){
+
+    for (let unaC of CATEGORIAS) {
         categoriasPorId[unaC.id] = unaC;
     }
 
-    let total = peliculas.length;
+    let total = PELICULAS.length;
     let mayores12 = 0;
 
-    for(let unaP of peliculas){
+    for (let unaP of PELICULAS) {
         let cat = categoriasPorId[unaP.idCategoria];
 
-        if(cat && Number(cat.edad_requerida) > 12){
+        if (cat && Number(cat.edad_requerida) > 12) {
             mayores12++;
         }
     }
 
-    let porcentaje = 0;
-    if(total > 0){
-        porcentaje = Math.round((mayores12 * 100) / total);
-    }
+    let porcentaje = total > 0
+        ? Math.round((mayores12 * 100) / total) : 0;
 
-    document.querySelector("#txtPorcentajeApt12").innerHTML =
-        `${porcentaje}% (${mayores12} de ${total})`;
+    document.querySelector("#txtPorcentajeApt12").innerHTML = `${porcentaje}% (${mayores12} de ${total})`;
+}
+
+
+function crearMapa() {
+
+    if (map) map.remove();
+
+    const contenedor = document.querySelector("#contenedorMapa");
+    contenedor.style.width = "90vw";
+    contenedor.style.height = "80vh";
+
+    map = L.map('contenedorMapa').setView([-15, -65], 3);
+
+    L.tileLayer('https://tile.openstreetmap.org/{z}/{x}/{y}.png', {
+        maxZoom: 5,
+        attribution: '&copy; OpenStreetMap'
+    }).addTo(map);
+
+    cargarUsuariosPorPais();
+}
+
+function cargarUsuariosPorPais() {
+    fetch(`${URLBASE}/usuariosPorPais`, {
+        method: "GET",
+        headers: {
+            "Authorization": "Bearer " + localStorage.getItem("token"),
+            "Content-Type": "application/json"
+        }
+    })
+    .then(function (response) {
+        return response.json();
+    })
+    .then(function (info) {
+
+        let listaPaises = info.paises || [];
+        mostrarMarkers(listaPaises);
+
+    })
+    .catch(function (error) {
+        console.log(error);
+    });
+}
+
+function mostrarMarkers(listaPaises) {
+
+    for (let unPais of PAISES_MAPA) {
+
+        let cantidad = 0;
+
+        for (let otroPais of listaPaises) {
+            if (unPais.nombre === otroPais.nombre) {
+                cantidad = otroPais.cantidadDeUsuarios;
+            }
+        }
+
+L.circleMarker([unPais.lat, unPais.lng], {
+    radius: Math.max(15, Math.min(5, cantidad)),
+    fillOpacity: 0.5,
+    weight: 1
+})
+.addTo(map)
+.bindTooltip(`<strong>${unPais.nombre}</strong><br>${cantidad} usuarios`, {
+    permanent: true,
+    direction: "top",
+    offset: [0, -5]
+})
+.openTooltip();
+    }
 }
