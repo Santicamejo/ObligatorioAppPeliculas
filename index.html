@@ -23,8 +23,6 @@
       crossorigin=""
     />
 
-    <link rel="stylesheet" href="styles.css" />
-
     <!-- Make sure you put this AFTER Leaflet's CSS -->
     <script
       src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"
@@ -349,27 +347,22 @@
         </ion-header>
 
         <ion-content class="ion-padding">
-          <!-- Título -->
           <ion-item>
             <ion-card-title>Estadística</ion-card-title>
           </ion-item>
 
-          <!-- Subtítulo 1 -->
           <ion-item>
             <ion-card-subtitle>Peliculas por categoria</ion-card-subtitle>
           </ion-item>
 
-          <!-- Estadística 1 -->
           <ion-list id="listaStatsCategorias"></ion-list>
 
-          <!-- Subtítulo 2 -->
           <ion-item>
             <ion-card-subtitle
               >Peliculas para mayores de 12 años</ion-card-subtitle
             >
           </ion-item>
 
-          <!-- Estadística 2 -->
           <ion-item>
             <ion-label id="txtPorcentajeApt12"></ion-label>
           </ion-item>

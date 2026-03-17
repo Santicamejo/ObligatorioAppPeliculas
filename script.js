@@ -196,7 +196,7 @@ function previaRegistroUsuario() {
   const idPais = document.querySelector("#registroPais").value;
 
   if (usuario == "" || password == "" || idPais == null) {
-    alert("Ningun campo debe estar vacio");
+    mostrarToast("Ningun campo debe estar vacio", "danger");
     return;
   }
 
@@ -224,9 +224,9 @@ function registrarUsuario(nuevoUsuario) {
         );
         login(usuarioConectado);
 
-        alert("Usuario registrado con exito");
+        mostrarToast("Usuario registrado con exito");
       } else {
-        alert(data.mensaje);
+        mostrarToast(data.mensaje, "danger");
       }
     })
     .catch(function (error) {
@@ -282,7 +282,7 @@ function previaLogin() {
     password = document.querySelector("#loginPassword").value;
 
     if (usuario == "" || password == "") {
-      alert("No se permiten campos vacios");
+      mostrarToast("No se permiten campos vacios", "danger");
       return;
     }
   }
@@ -314,9 +314,9 @@ function login(usuarioConectado) {
         previaCargarPeliculas();
         previaCargarCategorias();
         menuLogeado();
-        alert("Usuario logeado con exito");
+        mostrarToast("Usuario logeado con exito");
       } else {
-        alert(data.mensaje);
+        mostrarToast(data.mensaje, "danger");
       }
     })
     .catch(function (error) {
@@ -344,7 +344,7 @@ function autoLogin() {
 }
 
 function logout() {
-  if (!confirm("¿Seguro que querés salir?")) return;
+  
   localStorage.removeItem("token");
   localStorage.removeItem("usuario");
   localStorage.removeItem("password");
@@ -354,6 +354,7 @@ function logout() {
   ocultarPantallas();
 
   LOGIN.style.display = "block";
+  mostrarToast("Se a cerrado sesion", "primary");
 }
 
 function previaCargarCategorias() {
@@ -415,25 +416,26 @@ function setFechaMaxima() {
 setFechaMaxima();
 
 function previaRegistrarPelicula() {
-  const idCategoria = document.querySelector(
-    "#registroPeliculaCategoria",
-  ).value;
+  const idCategoria = document.querySelector("#registroPeliculaCategoria").value;
   const nombre = document.querySelector("#registroPeliculaNombre").value;
   const fechaEstreno = document.querySelector("#registroPeliculaFecha").value;
-  const comentario = document.querySelector(
-    "#registroPeliculaComentario",
-  ).value;
+  const comentario = document.querySelector("#registroPeliculaComentario").value;
 
   const hoy = new Date().toJSON().slice(0, 10);
 
+  if(nombre == "" || fechaEstreno == "" || comentario == "" || idCategoria == ""){
+    mostrarToast("No puede haber campos vacios", "danger");
+    return
+  }
+
   if (fechaEstreno > hoy) {
-    alert("La fecha no puede ser futura");
+    mostrarToast("La fecha no puede ser futura", "danger");
     return;
   }
 
   evaluarComentario(comentario).then(function (resultado) {
     if (resultado != 1) {
-      alert("El comentario es negativo, no se subió la película");
+      mostrarToast("El comentario es negativo, no se subió la película", "danger");
       return;
     }
 
@@ -455,11 +457,10 @@ function registrarPelicula(nuevaPelicula) {
       return response.json();
     })
     .then(function (informacion) {
-      console.log(informacion);
       if (informacion.codigo == 200) {
-        alert("La pelicula fue subida correctamente!");
+        mostrarToast("La pelicula fue subida correctamente!");
       } else {
-        alert("Hubo problemas al subir la pelicula");
+        mostrarToast("Hubo problemas al subir la pelicula", "danger");
       }
     })
     .catch(function (error) {
@@ -537,7 +538,6 @@ function cargarPeliculas(listaPeliculas) {
 }
 
 function previaBorrarPelicula(idPelicula) {
-  if (!confirm("¿Seguro que querés borrar esta película?")) return;
 
   fetch(`${URLBASE}/peliculas/${idPelicula}`, {
     method: "DELETE",
@@ -551,9 +551,10 @@ function previaBorrarPelicula(idPelicula) {
     })
     .then(function (data) {
       if (data.codigo === 200) {
+        mostrarToast("Pelicula eliminada correctamente", "primary");
         previaCargarPeliculas();
       } else {
-        alert(data.mensaje);
+        mostrarToast(data.mensaje, "danger");
       }
     })
     .catch(function (error) {
@@ -610,6 +611,21 @@ function cargarEstadisticas() {
 
   document.querySelector("#txtPorcentajeApt12").innerHTML =
     `${porcentaje}% (${mayores12} de ${total})`;
+}
+
+function mostrarToast(mensaje, color = "success", tiempo = 2500) {
+  const toast = document.createElement("ion-toast");
+  toast.message = mensaje;
+  toast.duration = tiempo;
+  toast.color = color;
+  toast.position = "bottom";
+  toast.buttons = [{ text: "OK", role: "cancel" }];
+
+  toast.addEventListener("didDismiss", () => toast.remove());
+
+  document.body.appendChild(toast);
+
+  toast.present();
 }
 
 function crearMapa() {
